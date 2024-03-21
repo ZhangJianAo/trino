@@ -62,10 +62,33 @@ public class TestMongoComplexTypePredicatePushDown
     public void testArrayContainsPushdownDatatype()
     {
         String tableName = "test_array_contains_pushdown_datatype" + randomNameSuffix();
+        int rowCount = 10;
+        init_array_test_table(tableName, rowCount);
+
+        testFilterCount(tableName, "contains(boolArray, true)", rowCount);
+        // testFilterCount(tableName, "contains(tinyintArray, 10)", rowCount);
+        // testFilterCount(tableName, "contains(smallintArray, 100", rowCount);
+        testFilterCount(tableName, "contains(intArray, 1000)", rowCount);
+        testFilterCount(tableName, "contains(bigintArray, 10000)", rowCount);
+        testFilterCount(tableName, "contains(doubleArray, 10.3)", rowCount);
+        testFilterCount(tableName, "contains(decimalArray, 10.3)", rowCount);
+        testFilterCount(tableName, "contains(tsArray, TIMESTAMP '2024-03-19 15:28:23')", rowCount);
+        testFilterCount(tableName, "contains(varcharArray, 'hello')", rowCount);
+        // testFilterCount(tableName, "contains(varbinArray, X'0D0A')", 10);
+        testFilterCount(tableName, "contains(oidArray, ObjectId('55b151633864d6438c61a9ce'))", rowCount);
+
+        assertUpdate("DROP TABLE " + tableName);
+    }
+
+    private void init_array_test_table(String tableName, int rowCount)
+    {
         String createSql = """
                 CREATE TABLE %s (\
                   boolArray ARRAY(BOOLEAN),\
-                  intArray ARRAY(BIGINT),\
+                  tinyintArray ARRAY(TINYINT),\
+                  smallintArray ARRAY(SMALLINT),\
+                  intArray ARRAY(INT),\
+                  bigintArray ARRAY(BIGINT),\
                   doubleArray ARRAY(DOUBLE),\
                   decimalArray ARRAY(DECIMAL(10,3)),\
                   tsArray ARRAY(TIMESTAMP(3)),\
@@ -75,29 +98,21 @@ public class TestMongoComplexTypePredicatePushDown
                 """.formatted(tableName);
         assertUpdate(createSql);
         String insertSql = """
-                INSERT INTO %s SELECT * FROM unnest(transform(SEQUENCE(1, 10), x -> ROW(\
-                ARRAY[true, true],
-                ARRAY[100, 200],
-                ARRAY[10.3, 20.3],
-                ARRAY[10.3, 20.3],
-                ARRAY[TIMESTAMP '2024-03-19 15:28:23'],
-                ARRAY['hello', 'world'],
-                ARRAY[X'0D0A'],
-                ARRAY[ObjectId('55b151633864d6438c61a9ce')]
+                INSERT INTO %s SELECT * FROM unnest(transform(SEQUENCE(1, %d), x -> ROW(\
+                  ARRAY[true, true],
+                  ARRAY[10, 20],
+                  ARRAY[100, 200],
+                  ARRAY[1000, 2000],
+                  ARRAY[10000, 20000],
+                  ARRAY[10.3, 20.3],
+                  ARRAY[10.3, 20.3],
+                  ARRAY[TIMESTAMP '2024-03-19 15:28:23'],
+                  ARRAY['hello', 'world'],
+                  ARRAY[X'0D0A'],
+                  ARRAY[ObjectId('55b151633864d6438c61a9ce')]
                 )))
-                """.formatted(tableName);
-        assertUpdate(insertSql, 10);
-
-        testFilterCount(tableName, "contains(boolArray, true)", 10);
-        testFilterCount(tableName,"contains(intArray, 100)", 10);
-        testFilterCount(tableName, "contains(doubleArray, 10.3)", 10);
-        testFilterCount(tableName, "contains(decimalArray, 10.3)", 10);
-        testFilterCount(tableName, "contains(tsArray, TIMESTAMP '2024-03-19 15:28:23')", 10);
-        testFilterCount(tableName, "contains(varcharArray, 'hello')", 10);
-        // testFilterCount(tableName, "contains(varbinArray, X'0D0A')", 10);
-        testFilterCount(tableName, "contains(oidArray, ObjectId('55b151633864d6438c61a9ce'))", 10);
-
-        assertUpdate("DROP TABLE " + tableName);
+                """.formatted(tableName, rowCount);
+        assertUpdate(insertSql, rowCount);
     }
 
     private void testFilterCount(String tableName, String predicate, int expectCount)
