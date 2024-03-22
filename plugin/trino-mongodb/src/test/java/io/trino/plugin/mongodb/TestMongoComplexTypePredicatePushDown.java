@@ -125,4 +125,19 @@ public class TestMongoComplexTypePredicatePushDown
 
         assertNoDataRead("SELECT * FROM %s WHERE not %s".formatted(tableName, predicate));
     }
+
+    @Test
+    public void testArraysOverlapPushdown()
+    {
+        String tableName = "test_arrays_overlap_pushdown_" + randomNameSuffix();
+        int rowCount = 10;
+        init_array_test_table(tableName, rowCount);
+
+        testFilterCount(tableName, "arrays_overlap(ARRAY[2000], intArray)", rowCount);
+        testFilterCount(tableName, "arrays_overlap(intArray, ARRAY[2000])", rowCount);
+        testFilterCount(tableName, "arrays_overlap(bigintArray, ARRAY[20000])", rowCount);
+        testFilterCount(tableName, "arrays_overlap(varcharArray, ARRAY['hello'])", rowCount);
+
+        assertUpdate("DROP TABLE " + tableName);
+    }
 }

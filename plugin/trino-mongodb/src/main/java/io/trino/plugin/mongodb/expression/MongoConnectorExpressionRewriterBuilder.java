@@ -26,6 +26,7 @@ public class MongoConnectorExpressionRewriterBuilder
     {
         return new ConnectorExpressionRewriter<Document>(Set.of(
                 new ContainsRewriteRule(),
+                new ArraysOverlapRewriteRule(),
                 new NotRewriteRule(),
                 new OrRewriteRule()));
     }
